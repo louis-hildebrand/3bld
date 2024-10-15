@@ -1,0 +1,52 @@
+=LET(
+    moveseq_regex,
+    "[UFRBLDxyz'2 ]+",
+    commutator_regex,
+    CONCATENATE("\[", moveseq_regex, ",", moveseq_regex, "\]"),
+    conjugate_regex,
+    CONCATENATE("\[", moveseq_regex, ": *", commutator_regex, "\]"),
+    split_left,
+    LAMBDA(x, sep,
+        TRIM(LEFT(RIGHT(x, LEN(x) - 1), FIND(sep, x) - 2))
+    ),
+    split_right,
+    LAMBDA(x, sep,
+        TRIM(RIGHT(LEFT(x, LEN(x) - 1), LEN(x) - 1 - FIND(sep, x)))
+    ),
+    invert_commutator,
+    LAMBDA(alg,
+        CONCATENATE("[", split_right(alg, ","), ", ", split_left(alg, ","), "]")
+    ),
+    invert_conjugate,
+    LAMBDA(alg,
+        LET(
+            setup,
+            split_left(alg, ":"),
+            comm,
+            split_right(alg, ":"),
+            CONCATENATE("[", setup, " : ", invert_commutator(comm), "]")
+        )
+    ),
+    invert_with_category,
+    LAMBDA(x, f,
+        LET(
+            category,
+            LEFT(x, 1),
+            alg,
+            RIGHT(x, LEN(x) - 3),
+            CONCATENATE(category, ". ", f(alg))
+        )
+    ),
+    x,
+    TRIM(INDEX($B$2:$V$22, MATCH(B$1, $B$1:$V$1, 0), MATCH($A5, $B$1:$V$1, 0))),
+    IFS(
+        (x = "") + (x = "5. Corner twist"),
+        x,
+        REGEXMATCH(x, CONCATENATE("^\d\. ", commutator_regex, "$")),
+        invert_with_category(x, invert_commutator),
+        REGEXMATCH(x, CONCATENATE("^\d\. ", conjugate_regex, "$")),
+        invert_with_category(x, invert_conjugate),
+        TRUE,
+        NA()
+    )
+)
