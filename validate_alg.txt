@@ -29,19 +29,18 @@
 
                                 )
                             ),
-    neighbor_ccw,           LAMBDA(i, neighbor_cw(neighbor_cw(i))),
     apply_commutator,       LAMBDA(rc, target1, target2,
                                 LET(
                                     _comment,    "Find indices of targets and their neighbors (clockwise and counter-clockwise).",
                                     c_idx,       FIND("C", solved_cube),
                                     c_ncw_idx,   neighbor_cw(c_idx),
-                                    c_nccw_idx,  neighbor_ccw(c_idx),
+                                    c_nccw_idx,  neighbor_cw(c_ncw_idx),
                                     t1_idx,      FIND(target1, solved_cube),
                                     t1_ncw_idx,  neighbor_cw(t1_idx),
-                                    t1_nccw_idx, neighbor_ccw(t1_idx),
+                                    t1_nccw_idx, neighbor_cw(t1_ncw_idx),
                                     t2_idx,      FIND(target2, solved_cube),
                                     t2_ncw_idx,  neighbor_cw(t2_idx),
-                                    t2_nccw_idx, neighbor_ccw(t2_idx),
+                                    t2_nccw_idx, neighbor_cw(t2_ncw_idx),
                                     REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
                                         rc,
                                         t1_nccw_idx, 1, MID(rc, c_nccw_idx,  1)),
@@ -53,6 +52,41 @@
                                         c_nccw_idx,  1, MID(rc, t2_nccw_idx, 1)),
                                         c_ncw_idx,   1, MID(rc, t2_ncw_idx,  1)),
                                         c_idx,       1, MID(rc, t2_idx,      1))
+                                )
+                            ),
+    apply_twist_cw,         LAMBDA(rc, target,
+                                LET(
+                                    t_idx,      FIND(target, solved_cube),
+                                    t_ncw_idx,  neighbor_cw(t_idx),
+                                    t_nccw_idx, neighbor_cw(t_ncw_idx),
+                                    REPLACE(REPLACE(REPLACE(
+                                        rc,
+                                        t_ncw_idx,  1, MID(rc, t_idx,      1)),
+                                        t_nccw_idx, 1, MID(rc, t_ncw_idx,  1)),
+                                        t_idx,      1, MID(rc, t_nccw_idx, 1))
+                                )
+                            ),
+    apply_twist_ccw,        LAMBDA(rc, target,
+                                LET(
+                                    t_idx,      FIND(target, solved_cube),
+                                    t_ncw_idx,  neighbor_cw(t_idx),
+                                    t_nccw_idx, neighbor_cw(t_ncw_idx),
+                                    REPLACE(REPLACE(REPLACE(
+                                        rc,
+                                        t_ncw_idx,  1, MID(rc, t_nccw_idx, 1)),
+                                        t_nccw_idx, 1, MID(rc, t_idx,      1)),
+                                        t_idx,      1, MID(rc, t_ncw_idx,  1))
+                                )
+                            ),
+    expected_permutation,   LAMBDA(rc, target1, target2,
+                                LET(
+                                    t1_idx, FIND(target1, solved_cube),
+                                    t2_idx, FIND(target2, solved_cube),
+                                    IFS(
+                                        neighbor_cw(t1_idx) = t2_idx, apply_twist_cw(apply_twist_ccw(rc, "C"), target1),
+                                        neighbor_cw(t2_idx) = t1_idx, apply_twist_cw(apply_twist_ccw(rc, target1), "C"),
+                                        TRUE,                         apply_commutator(rc, target1, target2)
+                                    )
                                 )
                             ),
     rearrange_cube,         LAMBDA(rc, indices,
@@ -125,8 +159,8 @@
                                     apply_moveseq(apply_commutator_alg(apply_moveseq(rc, setup), comm), invert_moveseq(setup))
                                 )
                             ),
-    is_alg_valid,           LAMBDA(alg, target1, target2,
-                                apply_moveseq(solved_cube, alg) = apply_commutator(solved_cube, target1, target2)
+    lookup_alg,             LAMBDA(name,
+                                INDEX(Algorithms!$B$2:$B, MATCH(name, Algorithms!$A$2:$a, 0))
                             ),
     alg,                    'Corner Comms'!B2,
     target1,                $A2,
@@ -137,12 +171,31 @@
         REGEXMATCH(alg, CONCATENATE("^\d\. ", commutator_regex, "$")),
         LET(
             alg_without_category, RIGHT(alg, LEN(alg) - 3),
-            apply_commutator_alg(solved_cube, alg_without_category) = apply_commutator(solved_cube, target1, target2)
+            apply_commutator_alg(solved_cube, alg_without_category) = expected_permutation(solved_cube, target1, target2)
         ),
         REGEXMATCH(alg, CONCATENATE("^\d\. ", conjugate_regex, "$")),
         LET(
             alg_without_category, RIGHT(alg, LEN(alg) - 3),
-            apply_conjugate_alg(solved_cube, alg_without_category) = apply_commutator(solved_cube, target1, target2)
+            apply_conjugate_alg(solved_cube, alg_without_category) = expected_permutation(solved_cube, target1, target2)
+        ),
+        REGEXMATCH(alg, CONCATENATE("^\d\. ", moveseq_regex, "$")),
+        LET(
+            alg_without_category, RIGHT(alg, LEN(alg) - 3),
+            apply_moveseq(solved_cube, alg_without_category) = expected_permutation(solved_cube, target1, target2)
+        ),
+        REGEXMATCH(alg, CONCATENATE("^\d\. \[", moveseq_regex, ":.*\]")),
+        LET(
+            alg_without_category, RIGHT(alg, LEN(alg) - 3),
+            setup,                split_left(alg_without_category, ":"),
+            inner_alg,            split_right(alg_without_category, ":"),
+            inner_moves,          lookup_alg(inner_alg),
+            apply_moveseq(apply_moveseq(apply_moveseq(solved_cube, setup), inner_moves), invert_moveseq(setup)) = expected_permutation(solved_cube, target1, target2)
+        ),
+        REGEXMATCH(alg, "^\d\. "),
+        LET(
+            alg_without_category, RIGHT(alg, LEN(alg) - 3),
+            moves,                lookup_alg(alg_without_category),
+            apply_moveseq(solved_cube, moves) = expected_permutation(solved_cube, target1, target2)
         )
     )
 )
