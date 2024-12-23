@@ -1,5 +1,5 @@
 =LET(
-    moveseq_regex,          "[UFRBLDxyz'2 ]+",
+    moveseq_regex,          "[UuFfRrBbLlDdxyz'2 ]+",
     commutator_regex,       CONCATENATE("\[", moveseq_regex, ",", moveseq_regex, "\]"),
     conjugate_regex,        CONCATENATE("\[", moveseq_regex, ": *", commutator_regex, "\]"),
     split_left,             LAMBDA(x, sep,
@@ -10,9 +10,9 @@
                             ),
     invert_move,            LAMBDA(move,
                                 IFS(
-                                    REGEXMATCH(move, "[UFRBLDxyz]'"), LEFT(move, LEN(move) - 1),
-                                    REGEXMATCH(move, "[UFRBLDxyz]2"), move,
-                                    REGEXMATCH(move, "[UFRBLDxyz]"),  CONCAT(move, "'")
+                                    REGEXMATCH(move, "[UuFfRrBbLlDdxyz]'"), LEFT(move, LEN(move) - 1),
+                                    REGEXMATCH(move, "[UuFfRrBFRBLDxyz]2"), move,
+                                    REGEXMATCH(move, "[UuFfRrBFRBLDxyz]"),  CONCAT(move, "'")
                                 )
                             ),
     invert_moveseq,         LAMBDA(moves,
