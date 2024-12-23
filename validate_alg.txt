@@ -168,33 +168,22 @@
     IFS(
         alg = "",
         "",
-        REGEXMATCH(alg, CONCATENATE("^\d\. ", commutator_regex, "$")),
+        REGEXMATCH(alg, CONCATENATE("^", commutator_regex, "$")),
+        apply_commutator_alg(solved_cube, alg) = expected_permutation(solved_cube, target1, target2),
+        REGEXMATCH(alg, CONCATENATE("^", conjugate_regex, "$")),
+        apply_conjugate_alg(solved_cube, alg) = expected_permutation(solved_cube, target1, target2),
+        REGEXMATCH(alg, CONCATENATE("^", moveseq_regex, "$")),
+        apply_moveseq(solved_cube, alg) = expected_permutation(solved_cube, target1, target2),
+        REGEXMATCH(alg, CONCATENATE("^\[", moveseq_regex, ":.*\]")),
         LET(
-            alg_without_category, RIGHT(alg, LEN(alg) - 3),
-            apply_commutator_alg(solved_cube, alg_without_category) = expected_permutation(solved_cube, target1, target2)
-        ),
-        REGEXMATCH(alg, CONCATENATE("^\d\. ", conjugate_regex, "$")),
-        LET(
-            alg_without_category, RIGHT(alg, LEN(alg) - 3),
-            apply_conjugate_alg(solved_cube, alg_without_category) = expected_permutation(solved_cube, target1, target2)
-        ),
-        REGEXMATCH(alg, CONCATENATE("^\d\. ", moveseq_regex, "$")),
-        LET(
-            alg_without_category, RIGHT(alg, LEN(alg) - 3),
-            apply_moveseq(solved_cube, alg_without_category) = expected_permutation(solved_cube, target1, target2)
-        ),
-        REGEXMATCH(alg, CONCATENATE("^\d\. \[", moveseq_regex, ":.*\]")),
-        LET(
-            alg_without_category, RIGHT(alg, LEN(alg) - 3),
-            setup,                split_left(alg_without_category, ":"),
-            inner_alg,            split_right(alg_without_category, ":"),
+            setup,                split_left(alg, ":"),
+            inner_alg,            split_right(alg, ":"),
             inner_moves,          lookup_alg(inner_alg),
             apply_moveseq(apply_moveseq(apply_moveseq(solved_cube, setup), inner_moves), invert_moveseq(setup)) = expected_permutation(solved_cube, target1, target2)
         ),
-        REGEXMATCH(alg, "^\d\. "),
+        TRUE,
         LET(
-            alg_without_category, RIGHT(alg, LEN(alg) - 3),
-            moves,                lookup_alg(alg_without_category),
+            moves, lookup_alg(alg),
             apply_moveseq(solved_cube, moves) = expected_permutation(solved_cube, target1, target2)
         )
     )
