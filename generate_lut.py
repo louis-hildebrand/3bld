@@ -31,7 +31,7 @@ Y_INDICES = [
 # fmt: on
 
 
-FACES = list("UuFfRrBbLlDdxyz")
+FACES = list("UuFfRrBbLlDdxyzMES")
 MOVES = [f"{face}{suffix}" for face in FACES for suffix in ["", "2", "'"]]
 
 
@@ -73,6 +73,12 @@ def compute_move_indices(rc: list[int], move: str) -> list[int]:
         return compute_moveseq_indices(rc, ["x2", "U", "x2"])
     elif move == "d":
         return compute_moveseq_indices(rc, ["U", "y'"])
+    elif move == "M":
+        return compute_moveseq_indices(rc, ["l", "L'"])
+    elif move == "E":
+        return compute_moveseq_indices(rc, ["d", "D'"])
+    elif move == "S":
+        return compute_moveseq_indices(rc, ["f", "F'"])
     else:
         raise ValueError(f"Unrecognized move {move}")
 

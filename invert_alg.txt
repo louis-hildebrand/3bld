@@ -1,7 +1,5 @@
 =LET(
-    moveseq_regex,          "[UuFfRrBbLlDdxyz'2 ]+",
-    commutator_regex,       CONCATENATE("\[", moveseq_regex, ",", moveseq_regex, "\]"),
-    conjugate_regex,        CONCATENATE("\[", moveseq_regex, ": *", commutator_regex, "\]"),
+    moveseq_regex,          "[UuFfRrBbLlDdxyzMES'2 ]+",
     split_left,             LAMBDA(x, sep,
                                 TRIM(LEFT(RIGHT(x, LEN(x) - 1), FIND(sep, x) - 2))
                             ),
@@ -10,45 +8,37 @@
                             ),
     invert_move,            LAMBDA(move,
                                 IFS(
-                                    REGEXMATCH(move, "[UuFfRrBbLlDdxyz]'"), LEFT(move, LEN(move) - 1),
-                                    REGEXMATCH(move, "[UuFfRrBFRBLDxyz]2"), move,
-                                    REGEXMATCH(move, "[UuFfRrBFRBLDxyz]"),  CONCAT(move, "'")
+                                    REGEXMATCH(move, "[UuFfRrBbLlDdxyzMES]'"), LEFT(move, LEN(move) - 1),
+                                    REGEXMATCH(move, "[UuFfRrBFRBLDxyzMES]2"), move,
+                                    REGEXMATCH(move, "[UuFfRrBFRBLDxyzMES]"),  CONCAT(move, "'")
                                 )
                             ),
     invert_moveseq,         LAMBDA(moves,
                                 TRIM(REDUCE("", SPLIT(moves, " "), LAMBDA(acc, m, CONCATENATE(invert_move(m), " ", acc))))
                             ),
-    invert_pure_comm,       LAMBDA(alg,
-                                CONCATENATE("[", split_right(alg, ","), ", ", split_left(alg, ","), "]")
-                            ),
-    invert_conj_comm,       LAMBDA(alg,
-                                LET(
-                                    setup,  split_left(alg, ":"),
-                                    comm,   split_right(alg, ":"),
-                                    CONCATENATE("[", setup, " : ", invert_pure_comm(comm), "]")
-                                )
-                            ),
-    invert_named_alg,       LAMBDA(name,
-                                INDEX(Algorithms!$C$2:$C, MATCH(TRIM(name), Algorithms!$A$2:$A, 0))
-                            ),
-    invert_conj_named,      LAMBDA(alg,
-                                LET(
-                                    setup,  split_left(alg, ":"),
-                                    part2,  split_right(alg, ":"),
-                                    CONCATENATE("[", setup, " : ", invert_named_alg(part2), "]")
+    invert_alg,             LAMBDA(alg, rec,
+                                IFS(
+                                    REGEXMATCH(alg, CONCATENATE("^", moveseq_regex, "$")),
+                                    invert_moveseq(alg),
+                                    REGEXMATCH(alg, CONCATENATE("^\[", moveseq_regex, ",", moveseq_regex, "\]$")),
+                                    CONCATENATE("[", split_right(alg, ","), ", ", split_left(alg, ","), "]"),
+                                    REGEXMATCH(alg, CONCATENATE("^\[", moveseq_regex, ":.*\]$")),
+                                    LET(
+                                        setup, split_left(alg, ":"),
+                                        inner, split_right(alg, ":"),
+                                        CONCATENATE("[", setup, " : ", rec(inner, rec), "]")
+                                    ),
+                                    TRUE,
+                                    LET(
+                                        moves, INDEX(Algorithms!$B$2:$B, MATCH(alg, Algorithms!$A$2:$A, 0)),
+                                        invert_moveseq(moves)
+                                    )
                                 )
                             ),
     x,                      TRIM(INDEX($B$2:$V$22, MATCH(B$1, $B$1:$V$1, 0), MATCH($A3, $B$1:$V$1, 0))),
-    IFS(
-        REGEXMATCH(x, CONCATENATE("^", commutator_regex, "$")),
-        invert_pure_comm(x),
-        REGEXMATCH(x, CONCATENATE("^", conjugate_regex, "$")),
-        invert_conj_comm(x),
-        REGEXMATCH(x, CONCATENATE("^\[", moveseq_regex, ":.*\]$")),
-        invert_conj_named(x),
-        REGEXMATCH(x, CONCATENATE("^", moveseq_regex, "$")),
-        invert_moveseq(x),
-        TRUE,
-        invert_named_alg(x)
+    IF(
+        x = "",
+        "",
+        invert_alg(x, invert_alg)
     )
 )
