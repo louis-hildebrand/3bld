@@ -26,7 +26,6 @@
                                     i = 43, 13,
                                     i = 45, 21,
                                     i = 47, 29
-
                                 )
                             ),
     apply_commutator,       LAMBDA(rc, target1, target2,
@@ -155,54 +154,41 @@
                                 TRIM(REDUCE("", SPLIT(moves, " "), LAMBDA(acc, m, CONCATENATE(invert_move(m), " ", acc))))
                             ),
     moveseq_regex,          "[UuFfRrBbLlDdxyz'2 ]+",
-    commutator_regex,       CONCATENATE("\[", moveseq_regex, ",", moveseq_regex, "\]"),
-    conjugate_regex,        CONCATENATE("\[", moveseq_regex, ": *", commutator_regex, "\]"),
     split_left,             LAMBDA(x, sep,
                                 TRIM(LEFT(RIGHT(x, LEN(x) - 1), FIND(sep, x) - 2))
                             ),
     split_right,            LAMBDA(x, sep,
                                 TRIM(RIGHT(LEFT(x, LEN(x) - 1), LEN(x) - 1 - FIND(sep, x)))
                             ),
-    apply_commutator_alg,   LAMBDA(rc, alg,
-                                LET(
-                                    comm1, split_left(alg, ","),
-                                    comm2, split_right(alg, ","),
-                                    apply_moveseq(apply_moveseq(apply_moveseq(apply_moveseq(rc, comm1), comm2), invert_moveseq(comm1)), invert_moveseq(comm2))
+    apply_alg,              LAMBDA(rc, alg, rec,
+                                IFS(
+                                    REGEXMATCH(alg, CONCATENATE("^", moveseq_regex, "$")),
+                                    apply_moveseq(rc, alg),
+                                    REGEXMATCH(alg, CONCATENATE("^\[", moveseq_regex, ",", moveseq_regex, "\]$")),
+                                    LET(
+                                        comm1, split_left(alg, ","),
+                                        comm2, split_right(alg, ","),
+                                        apply_moveseq(apply_moveseq(apply_moveseq(apply_moveseq(rc, comm1), comm2), invert_moveseq(comm1)), invert_moveseq(comm2))
+                                    ),
+                                    REGEXMATCH(alg, CONCATENATE("^\[", moveseq_regex, ":.*\]$")),
+                                    LET(
+                                        setup, split_left(alg, ":"),
+                                        inner, split_right(alg, ":"),
+                                        apply_moveseq(rec(apply_moveseq(rc, setup), inner, rec), invert_moveseq(setup))
+                                    ),
+                                    TRUE,
+                                    LET(
+                                        moves, INDEX(Algorithms!$B$2:$B, MATCH(alg, Algorithms!$A$2:$A, 0)),
+                                        apply_moveseq(rc, moves)
+                                    )
                                 )
                             ),
-    apply_conjugate_alg,    LAMBDA(rc, alg,
-                                LET(
-                                    setup, split_left(alg, ":"),
-                                    comm,  split_right(alg, ":"),
-                                    apply_moveseq(apply_commutator_alg(apply_moveseq(rc, setup), comm), invert_moveseq(setup))
-                                )
-                            ),
-    lookup_alg,             LAMBDA(name,
-                                INDEX(Algorithms!$B$2:$B, MATCH(name, Algorithms!$A$2:$a, 0))
-                            ),
-    alg,                    'Corner Comms'!B2,
+    alg,                    B2,
     target1,                $A2,
     target2,                B$1,
-    IFS(
+    IF(
         alg = "",
         "",
-        REGEXMATCH(alg, CONCATENATE("^", commutator_regex, "$")),
-        apply_commutator_alg(solved_cube, alg) = expected_permutation(solved_cube, target1, target2),
-        REGEXMATCH(alg, CONCATENATE("^", conjugate_regex, "$")),
-        apply_conjugate_alg(solved_cube, alg) = expected_permutation(solved_cube, target1, target2),
-        REGEXMATCH(alg, CONCATENATE("^", moveseq_regex, "$")),
-        apply_moveseq(solved_cube, alg) = expected_permutation(solved_cube, target1, target2),
-        REGEXMATCH(alg, CONCATENATE("^\[", moveseq_regex, ":.*\]")),
-        LET(
-            setup,                split_left(alg, ":"),
-            inner_alg,            split_right(alg, ":"),
-            inner_moves,          lookup_alg(inner_alg),
-            apply_moveseq(apply_moveseq(apply_moveseq(solved_cube, setup), inner_moves), invert_moveseq(setup)) = expected_permutation(solved_cube, target1, target2)
-        ),
-        TRUE,
-        LET(
-            moves, lookup_alg(alg),
-            apply_moveseq(solved_cube, moves) = expected_permutation(solved_cube, target1, target2)
-        )
+        apply_alg(solved_cube, alg, apply_alg) = expected_permutation(solved_cube, target1, target2)
     )
 )

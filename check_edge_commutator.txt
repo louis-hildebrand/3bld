@@ -166,7 +166,7 @@
                                     TRUE,
                                     LET(
                                         moves, INDEX(Algorithms!$B$2:$B, MATCH(alg, Algorithms!$A$2:$A, 0)),
-                                        apply_moveseq(solved_cube, moves)
+                                        apply_moveseq(rc, moves)
                                     )
                                 )
                             ),
